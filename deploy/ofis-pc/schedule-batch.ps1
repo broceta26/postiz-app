@@ -23,9 +23,19 @@ $api = "http://127.0.0.1:$Port/api/public/v1"
 $imageChannels = @('facebook', 'instagram')
 $channelAliases = @{ 'instagram' = @('instagram', 'instagram-standalone') }
 
-function EnvValue($key) {
-  $line = Get-Content (Join-Path $Dir '.env') | Where-Object { $_ -match "^$key=" } | Select-Object -First 1
-  if ($line) { $line.Substring($key.Length + 1).Trim() }
+function EnvValue([string]$name) {
+  # Tolerant of Notepad edits: BOM / zero-width chars, spaces around "=", quotes, a duplicate empty line
+  $value = $null; $found = 0
+  foreach ($raw in [System.IO.File]::ReadAllLines((Join-Path $Dir '.env'))) {
+    $line = $raw.Trim([char]0xFEFF, [char]0x200B, [char]0x00A0, ' ', "`t")
+    if ($line -match "^$([regex]::Escape($name))\s*=(.*)$") {
+      $found++
+      $candidate = $Matches[1].Trim().Trim('"', "'")
+      if ($candidate) { $value = $candidate }
+    }
+  }
+  if (-not $value -and $found) { Write-Host "  .env: $found red(ova) $name, ali bez vrednosti" -ForegroundColor Yellow }
+  return $value
 }
 function Api($method, $path, $body) {
   $params = @{ Method = $method; Uri = "$api$path"; Headers = @{ Authorization = $script:apiKey } }
