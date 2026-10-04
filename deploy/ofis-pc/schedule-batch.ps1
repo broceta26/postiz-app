@@ -4,6 +4,7 @@
 #   powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor" -DryRun
 #   ... -TestPost   -> prva objava paketa izlazi za ~3 min na povezane kanale, bez upisa u stanje (provera izgleda)
 #   ... -TestPost -Only okt26-fbig-03   -> isto, ali za izabranu objavu
+#   ... -MarkDone okt26-fbig-03         -> objava je već izašla (npr. proba): upiši je u stanje, da se ne zakaže ponovo
 #   powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor"
 #
 # Paket (JSON niz): { id, date (ISO sa zonom), channels: [telegram|facebook|instagram|linkedin-page],
@@ -17,7 +18,8 @@ param(
   [int]$Port = 4007,
   [switch]$DryRun,
   [switch]$TestPost,
-  [string]$Only = ''
+  [string]$Only = '',
+  [string]$MarkDone = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -93,6 +95,19 @@ if (Test-Path $statePath) {
   $saved = Get-Content $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
   $saved.posts.PSObject.Properties | ForEach-Object { $state.posts[$_.Name] = $_.Value }
   $saved.uploads.PSObject.Properties | ForEach-Object { $state.uploads[$_.Name] = $_.Value }
+}
+
+if ($MarkDone) {
+  $item = $items | Where-Object { $_.id -eq $MarkDone } | Select-Object -First 1
+  if (-not $item) { throw "U paketu nema objave sa id '$MarkDone'." }
+  foreach ($channel in $item.channels) {
+    if ($byChannel.ContainsKey($channel)) {
+      $state.posts["$($item.id)|$channel"] = @{ at = (Get-Date).ToString('o'); response = 'marked done (already published)' }
+      Write-Host "  OZNAČENO $($item.id) | $channel kao objavljeno" -ForegroundColor Green
+    }
+  }
+  SaveState
+  return
 }
 
 $scheduled = 0; $skipped = 0; $missing = @{}
