@@ -48,16 +48,19 @@ if (Healthy) {
   }
 }
 
-if ((Test-Path $tailscale) -and -not ((& $tailscale funnel status 2>&1) -match "127.0.0.1:$Port")) {
-  Log 'funnel missing -> enabling'
-  & $tailscale funnel --bg $Port 2>&1 | ForEach-Object { Log "funnel: $_" }
+if (Test-Path $tailscale) {
+  $funnel = (& $tailscale funnel status 2>&1) -join "`n"
+  if (-not ($funnel -match 'Funnel on' -and $funnel -match "127.0.0.1:$Port")) {
+    Log 'funnel missing -> enabling'
+    & $tailscale funnel --bg $Port 2>&1 | ForEach-Object { Log "funnel: $_" }
+  }
 }
 
 $backups = Join-Path $Dir 'backups'
 $today = Join-Path $backups ("postiz-{0}.sql" -f (Get-Date -Format 'yyyyMMdd'))
 if (-not (Test-Path $today) -and (Healthy)) {
   New-Item -ItemType Directory -Force -Path $backups | Out-Null
-  docker exec postiz-postgres pg_dump -U postiz-user -d postiz-db -f /tmp/postiz-backup.sql 2>&1 | Out-Null
+  docker exec postiz-postgres pg_dump -U postiz-user -d postiz-db --clean --if-exists -f /tmp/postiz-backup.sql 2>&1 | Out-Null
   if ($LASTEXITCODE -eq 0) {
     docker cp postiz-postgres:/tmp/postiz-backup.sql $today 2>&1 | Out-Null
     Log "backup $today"

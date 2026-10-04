@@ -25,14 +25,16 @@ Kad to uradiš, pokreni ponovo: `powershell -ExecutionPolicy Bypass -File C:\pos
 
 Na kraju ispiše adresu, na primer `https://ofis-pc.tail1234.ts.net`. **Prvi nalog koji se registruje postaje admin** i posle njega je registracija zatvorena.
 
+Zašto `NOT_SECURED=true`: `ts.net` je javni sufiks, pa browser odbija kolačić za `.ts.net`. Sa ovim podešavanjem kolačić važi samo za tvoju adresu, a veza i dalje ide preko HTTPS-a.
+
 ## Posle instalacije
 
 1. Settings → Developers → kopiraj API ključ. Njime agent šalje odobrene pakete objava (`POST /api/public/v1/posts`).
 2. Brendovi su grupe (customers) unutar jedne organizacije: `FX Doctor`, `SwissPrimeMarkets`, kasnije `DayProp`, `ShowMeTrade`. Pri povezivanju svakog kanala izaberi njegov brend.
 3. Kanali: ključeve upiši u `C:\postiz\.env`, pa pokreni `install.ps1` ponovo.
    - **Telegram:** @BotFather → `/newbot` → `TELEGRAM_TOKEN` i `TELEGRAM_BOT_NAME`. Bota dodaj kao admina kanala, pa u Postiz-u Add Channel → Telegram.
-   - **Facebook + Instagram:** jedna Meta aplikacija (developers.facebook.com → Business tip). Kao Valid OAuth Redirect URI upiši `https://<adresa>/integrations/social/facebook` i `https://<adresa>/integrations/social/instagram`. Upiši `FACEBOOK_APP_ID` i `FACEBOOK_APP_SECRET`. Dok si admin aplikacije, za svoje strane radi i bez Meta pregleda. Instagram mora biti Business nalog povezan sa FB stranom.
-   - **LinkedIn stranice:** aplikacija na developer.linkedin.com, povezana sa stranom firme. Treba joj proizvod **Community Management API**, koji LinkedIn odobrava posle prijave, pa podnesi prijavu što pre. Redirect: `https://<adresa>/integrations/social/linkedin-page`.
+   - **Facebook + Instagram:** jedna Meta aplikacija (developers.facebook.com → Business tip). Kao Valid OAuth Redirect URI upiši `https://<adresa>/integrations/social/facebook` i `https://<adresa>/integrations/social/instagram`. Upiši `FACEBOOK_APP_ID` i `FACEBOOK_APP_SECRET`. Aplikaciju prebaci u **Live**, za šta treba URL politike privatnosti. U Development režimu objave vide samo nalozi sa ulogom u aplikaciji. Za tvoje strane je dovoljan standardni pristup, bez Meta pregleda, dok si admin aplikacije. Instagram mora biti Business nalog povezan sa FB stranom.
+   - **LinkedIn stranice:** aplikacija na developer.linkedin.com, povezana sa stranom firme. Postiz traži sve ove dozvole: `openid profile w_member_social r_basicprofile rw_organization_admin w_organization_social r_organization_social`. Daju ih proizvodi **Sign In with LinkedIn using OpenID Connect**, **Share on LinkedIn** i **Community Management API**. Treći LinkedIn odobrava posle prijave, pa je podnesi što pre. Redirect: `https://<adresa>/integrations/social/linkedin-page`.
 4. `ALERT_CHAT_ID` u `.env`: tvoj Telegram chat id (piši botu, pa otvori `https://api.telegram.org/bot<TOKEN>/getUpdates`). Tu stižu poruke nadzora.
 
 ## Održavanje
@@ -40,7 +42,7 @@ Na kraju ispiše adresu, na primer `https://ofis-pc.tail1234.ts.net`. **Prvi nal
 - Logovi: `docker compose -f C:\postiz\docker-compose.yaml logs -f postiz`
 - Log nadzora: `C:\postiz\watchdog.log`
 - Nova verzija: promeni tag u `docker-compose.yaml` u repou, pa pokreni `install.ps1`. Ne koristi `latest`, da se ništa ne promeni dok si odsutan.
-- Vraćanje backup-a: `docker cp C:\postiz\backups\postiz-YYYYMMDD.sql postiz-postgres:/tmp/r.sql`, pa `docker exec postiz-postgres psql -U postiz-user -d postiz-db -f /tmp/r.sql`
+- Vraćanje backup-a (dump briše i ponovo pravi tabele): `docker stop postiz`, `docker cp C:\postiz\backups\postiz-YYYYMMDD.sql postiz-postgres:/tmp/r.sql`, `docker exec postiz-postgres psql -U postiz-user -d postiz-db -f /tmp/r.sql`, pa `docker start postiz`.
 
 ## Rizici dok niko nije u kancelariji
 

@@ -13,6 +13,11 @@ services:
     container_name: postiz
     restart: always
     env_file: .env
+    # Public resolver: the app fetches its own FRONTEND_URL/uploads/... for LinkedIn/X.
+    # The host's MagicDNS would answer with a 100.x tailnet IP, which the SSRF guard blocks.
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     environment:
       DATABASE_URL: 'postgresql://postiz-user:${POSTGRES_PASSWORD}@postiz-postgres:5432/postiz-db'
       REDIS_URL: 'redis://postiz-redis:6379'
@@ -23,6 +28,11 @@ services:
       UPLOAD_DIRECTORY: '/uploads'
       NEXT_PUBLIC_UPLOAD_DIRECTORY: '/uploads'
       NX_ADD_PLUGINS: 'false'
+      # *.ts.net is a public suffix, so a cookie for ".ts.net" is dropped by browsers;
+      # NOT_SECURED makes the frontend store a host-only auth cookie from the "auth" header
+      NOT_SECURED: 'true'
+      # re-queues posts whose Temporal workflow went missing (hourly check)
+      RUN_CRON: 'true'
     volumes:
       - postiz-config:/config/
       - postiz-uploads:/uploads/

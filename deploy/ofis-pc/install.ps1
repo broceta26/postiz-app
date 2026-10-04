@@ -81,15 +81,8 @@ if (-not $dockerReady -and (Test-Path $dockerDesktop)) {
   for ($i = 0; $i -lt 24 -and -not $dockerReady; $i++) { Start-Sleep 5; $dockerReady = Native { docker info } }
 }
 if (-not $dockerReady) { YourTurn 'Otvori Docker Desktop, prihvati uslove i sačekaj da piše "Engine running".' }
-foreach ($settings in @("$env:APPDATA\Docker\settings-store.json", "$env:APPDATA\Docker\settings.json")) {
-  if (Test-Path $settings) {
-    try {
-      $json = Get-Content $settings -Raw | ConvertFrom-Json
-      $key = if ($settings -like '*settings-store.json') { 'AutoStart' } else { 'autoStart' }
-      $json | Add-Member -NotePropertyName $key -NotePropertyValue $true -Force
-      WriteUtf8 $settings ($json | ConvertTo-Json -Depth 20)
-    } catch { Write-Host "   PAZI  uključi ručno: Docker Desktop > Settings > Start Docker Desktop when you sign in" -ForegroundColor Yellow }
-  }
+if (Test-Path $dockerDesktop) {
+  Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name 'Docker Desktop' -Value "`"$dockerDesktop`""
 }
 Ok 'Docker radi i pali se sa Windows-om'
 
@@ -98,8 +91,8 @@ if (-not (Test-Path $tailscale)) {
   winget install -e --id Tailscale.Tailscale --accept-package-agreements --accept-source-agreements
   YourTurn 'Tailscale je instaliran. Klikni ikonicu Tailscale pored sata i prijavi se istim nalogom kao VPS.'
 }
-$status = (& $tailscale status --json) -join "`n" | ConvertFrom-Json
-if ($status.BackendState -ne 'Running') { YourTurn 'Klikni ikonicu Tailscale pored sata i prijavi se istim nalogom kao VPS.' }
+try { $status = (& $tailscale status --json) -join "`n" | ConvertFrom-Json } catch { $status = $null }
+if (-not $status -or $status.BackendState -ne 'Running') { YourTurn 'Klikni ikonicu Tailscale pored sata i prijavi se istim nalogom kao VPS.' }
 $publicHost = $status.Self.DNSName.TrimEnd('.')
 $publicUrl = "https://$publicHost"
 Ok $publicUrl
