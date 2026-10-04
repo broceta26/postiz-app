@@ -117,7 +117,9 @@ Ok "$envPath (tajne ostaju samo na ovom računaru)"
 Step 'Postiz'
 Push-Location $Dir
 try {
-  docker compose pull
+  # Over SSH the Docker Desktop credential helper has no logon session and pull fails;
+  # the images are already local then, so a failed pull is only a warning
+  if (-not (Native { docker compose pull })) { Write-Host '   PAZI  docker compose pull nije uspeo (SSH sesija?); koristim postojeće image-e' -ForegroundColor Yellow }
   docker compose up -d --remove-orphans
   if ($LASTEXITCODE -ne 0) { throw 'docker compose up nije uspeo' }
 } finally { Pop-Location }
@@ -133,12 +135,14 @@ if ($LASTEXITCODE -ne 0) { YourTurn 'Funnel nije uključen. Otvori link koji je 
 Ok "$publicUrl -> 127.0.0.1:$Port"
 
 Step 'Nadzor (watchdog na 5 min + dnevni backup baze)'
+# DOMAIN\user from the token: over SSH $env:USERDOMAIN is "WORKGROUP", which is not a valid principal
+$taskUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Dir\watchdog.ps1`""
 $triggers = @(
-  (New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"),
+  (New-ScheduledTaskTrigger -AtLogOn -User $taskUser),
   (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5))
 )
-$principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
+$principal = New-ScheduledTaskPrincipal -UserId $taskUser -LogonType Interactive
 $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
 Register-ScheduledTask -TaskName 'postiz-watchdog' -Action $action -Trigger $triggers -Principal $principal -Settings $taskSettings -Force | Out-Null
 Ok 'zadatak postiz-watchdog registrovan'
