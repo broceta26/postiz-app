@@ -2,6 +2,7 @@
 # Bezbedno je pokretati više puta: već zakazano se preskače (stanje u C:\postiz\scheduled\).
 #
 #   powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor" -DryRun
+#   ... -TestPost   -> prva objava paketa izlazi za ~3 min na povezane kanale, bez upisa u stanje (provera izgleda)
 #   powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor"
 #
 # Paket (JSON niz): { id, date (ISO sa zonom), channels: [telegram|facebook|instagram|linkedin-page],
@@ -13,7 +14,8 @@ param(
   [string]$Images = '',
   [string]$Dir = 'C:\postiz',
   [int]$Port = 4007,
-  [switch]$DryRun
+  [switch]$DryRun,
+  [switch]$TestPost
 )
 
 $ErrorActionPreference = 'Stop'
@@ -82,9 +84,11 @@ if (Test-Path $statePath) {
 }
 
 $scheduled = 0; $skipped = 0; $missing = @{}
+if ($TestPost) { $items = @($items | Select-Object -First 1) }
 foreach ($item in $items) {
   $when = UtcDate $item.date
-  if ($when -lt (Get-Date).ToUniversalTime().AddMinutes(10)) {
+  if ($TestPost) { $when = (Get-Date).ToUniversalTime().AddMinutes(3) }
+  elseif ($when -lt (Get-Date).ToUniversalTime().AddMinutes(10)) {
     Write-Host "  PRESKAČEM $($item.id): termin $($item.date) je prošao" -ForegroundColor Yellow; $skipped++; continue
   }
   $posts = @(); $channelsInRequest = @()
@@ -95,7 +99,7 @@ foreach ($item in $items) {
   }
   foreach ($channel in $item.channels) {
     $key = "$($item.id)|$channel"
-    if ($state.posts.ContainsKey($key)) { continue }
+    if ($state.posts.ContainsKey($key) -and -not $TestPost) { continue }
     if (-not $byChannel.ContainsKey($channel)) { $missing[$channel] = $true; continue }
     $text = if ($item.text -is [string]) { $item.text } else { $item.text.$channel }
     if (-not $text) { throw "$($item.id): nema teksta za kanal $channel" }
@@ -131,6 +135,7 @@ foreach ($item in $items) {
     $detail = $_.ErrorDetails.Message
     throw "$($item.id) nije zakazan: $($_.Exception.Message) $detail"
   }
+  if ($TestPost) { Write-Host "  TEST $label (izlazi za ~3 min; nije upisano u stanje, pa pravo zakazivanje ide normalno)" -ForegroundColor Green; $scheduled++; continue }
   foreach ($channel in $channelsInRequest) { $state.posts["$($item.id)|$channel"] = @{ at = (Get-Date).ToString('o'); response = $response } }
   SaveState
   Write-Host "  ZAKAZANO $label" -ForegroundColor Green
