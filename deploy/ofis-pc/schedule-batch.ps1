@@ -9,7 +9,7 @@
 #
 # Paket (JSON niz): { id, date (ISO sa zonom), channels: [telegram|facebook|instagram|linkedin-page],
 #                     text: "..." ili { <kanal>: "..." } }
-# Slike: <Images>\<id>_NN.jpg (podrazumevano folder "kreative" pored paketa); idu na facebook i instagram.
+# Slike: <Images>\<id>_NN.jpg (podrazumevano folder "kreative" pored paketa); idu na facebook, instagram i telegram.
 param(
   [Parameter(Mandatory = $true)][string]$Batch,
   [Parameter(Mandatory = $true)][string]$Brand,
@@ -24,7 +24,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $api = "http://127.0.0.1:$Port/api/public/v1"
-$imageChannels = @('facebook', 'instagram')
+# Telegram sends a single image with the text as caption (Telegram caps captions at 1,024 characters)
+$imageChannels = @('facebook', 'instagram', 'telegram')
 $channelAliases = @{ 'instagram' = @('instagram', 'instagram-standalone') }
 
 function EnvValue([string]$name) {

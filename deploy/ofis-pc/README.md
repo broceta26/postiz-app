@@ -45,7 +45,7 @@ Zašto `NOT_SECURED=true`: `ts.net` je javni sufiks, pa browser odbija kolačić
 3. Prvo proba, ništa se ne šalje: `powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor" -DryRun`
 4. Pa pravo: isti red bez `-DryRun`. Objave se pojave u Postiz kalendaru, u grupi tog brenda.
 
-Kanal koji još nije povezan se preskače. Kad ga povežeš, pokreni isti red ponovo i dodaće se samo te objave. Ako objava za Instagram nema sliku, skripta ne zakazuje ni njenu Facebook verziju.
+Kanal koji još nije povezan se preskače. Kad ga povežeš, pokreni isti red ponovo i dodaće se samo te objave. Ako objava za Instagram nema sliku, skripta ne zakazuje ni njenu Facebook verziju. Uz Telegram objavu slika ide kao jedna fotografija sa tekstom ispod, a Telegram tada prima najviše 1.024 znaka.
 
 ## Održavanje
 
