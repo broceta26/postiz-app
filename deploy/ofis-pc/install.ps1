@@ -53,6 +53,7 @@ $files = @{
   'deploy/ofis-pc/docker-compose.yaml'  = 'docker-compose.yaml'
   'deploy/ofis-pc/.env.example'         = '.env.example'
   'deploy/ofis-pc/watchdog.ps1'         = 'watchdog.ps1'
+  'deploy/ofis-pc/schedule-batch.ps1'   = 'schedule-batch.ps1'
   'deploy/ofis-pc/install.ps1'          = 'install.ps1'
   'dynamicconfig/development-sql.yaml'  = 'dynamicconfig\development-sql.yaml'
 }

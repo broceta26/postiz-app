@@ -9,6 +9,7 @@ HTTPS je obavezan: Meta i LinkedIn vraćaju korisnika posle prijave samo na HTTP
 | `install.ps1` | Instalira i ažurira. Može da se pokreće više puta i staje kad mora nešto da uradiš ti. |
 | `docker-compose.yaml` | Postiz `v2.25.0` + Postgres + Redis + Temporal. Sve baze su na imenovanim volume-ima. |
 | `watchdog.ps1` | Na svakih 5 min diže Postiz ako je pao i javlja na Telegram. Jednom dnevno pravi backup baze u `C:\postiz\backups` i čuva poslednjih 14. |
+| `schedule-batch.ps1` | Zakazuje odobren paket objava (JSON + slike) na kanale jednog brenda. Može da se pokreće više puta i ne pravi duplikate. |
 | `.env.example` | Šablon. Pravi `.env` sa tajnama postoji samo na ofis-pc i nikad ne ide u git. |
 
 ## Instalacija
@@ -36,6 +37,15 @@ Zašto `NOT_SECURED=true`: `ts.net` je javni sufiks, pa browser odbija kolačić
    - **Facebook + Instagram:** jedna Meta aplikacija (developers.facebook.com → Business tip). Kao Valid OAuth Redirect URI upiši `https://<adresa>/integrations/social/facebook` i `https://<adresa>/integrations/social/instagram`. Upiši `FACEBOOK_APP_ID` i `FACEBOOK_APP_SECRET`. Aplikaciju prebaci u **Live**, za šta treba URL politike privatnosti. U Development režimu objave vide samo nalozi sa ulogom u aplikaciji. Za tvoje strane je dovoljan standardni pristup, bez Meta pregleda, dok si admin aplikacije. Instagram mora biti Business nalog povezan sa FB stranom.
    - **LinkedIn stranice:** aplikacija na developer.linkedin.com, povezana sa stranom firme. Postiz traži sve ove dozvole: `openid profile w_member_social r_basicprofile rw_organization_admin w_organization_social r_organization_social`. Daju ih proizvodi **Sign In with LinkedIn using OpenID Connect**, **Share on LinkedIn** i **Community Management API**. Treći LinkedIn odobrava posle prijave, pa je podnesi što pre. Redirect: `https://<adresa>/integrations/social/linkedin-page`.
 4. `ALERT_CHAT_ID` u `.env`: tvoj Telegram chat id (piši botu, pa otvori `https://api.telegram.org/bot<TOKEN>/getUpdates`). Tu stižu poruke nadzora.
+
+## Zakazivanje odobrenog paketa
+
+1. API ključ (Settings → Developers) upiši u `C:\postiz\.env` kao `POSTIZ_API_KEY=`.
+2. Paket je JSON (`id`, `date`, `channels`, `text`), a slike su u folderu `kreative` pored njega, imenovane `<id>_01.jpg`, `<id>_02.jpg`...
+3. Prvo proba, ništa se ne šalje: `powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor" -DryRun`
+4. Pa pravo: isti red bez `-DryRun`. Objave se pojave u Postiz kalendaru, u grupi tog brenda.
+
+Kanal koji još nije povezan se preskače. Kad ga povežeš, pokreni isti red ponovo i dodaće se samo te objave. Ako objava za Instagram nema sliku, skripta ne zakazuje ni njenu Facebook verziju.
 
 ## Održavanje
 
