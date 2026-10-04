@@ -3,6 +3,7 @@
 #
 #   powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor" -DryRun
 #   ... -TestPost   -> prva objava paketa izlazi za ~3 min na povezane kanale, bez upisa u stanje (provera izgleda)
+#   ... -TestPost -Only okt26-fbig-03   -> isto, ali za izabranu objavu
 #   powershell -ExecutionPolicy Bypass -File C:\postiz\schedule-batch.ps1 -Batch <paket.json> -Brand "FX Doctor"
 #
 # Paket (JSON niz): { id, date (ISO sa zonom), channels: [telegram|facebook|instagram|linkedin-page],
@@ -15,7 +16,8 @@ param(
   [string]$Dir = 'C:\postiz',
   [int]$Port = 4007,
   [switch]$DryRun,
-  [switch]$TestPost
+  [switch]$TestPost,
+  [string]$Only = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -94,6 +96,10 @@ if (Test-Path $statePath) {
 }
 
 $scheduled = 0; $skipped = 0; $missing = @{}
+if ($Only) {
+  $items = @($items | Where-Object { $_.id -eq $Only })
+  if (-not $items) { throw "U paketu nema objave sa id '$Only'." }
+}
 if ($TestPost) { $items = @($items | Select-Object -First 1) }
 foreach ($item in $items) {
   $when = UtcDate $item.date
